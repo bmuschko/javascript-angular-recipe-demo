@@ -1,0 +1,100 @@
+name: Moderne JavaScript recipes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  recipe-verification:
+    name: recipe-verification (${{ matrix.os }}, CLI ${{ matrix.cli-version }}, Java ${{ matrix.java-version }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            cli-version: "3.57.15"
+            java-version: "17"
+          - os: ubuntu-latest
+            cli-version: "4.0.5"
+            java-version: "25"
+          - os: windows-latest
+            cli-version: "3.57.15"
+            java-version: "17"
+          - os: windows-latest
+            cli-version: "4.0.5"
+            java-version: "25"
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java-version }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Moderne CLI
+        env:
+          MODERNE_CLI_VERSION: ${{ matrix.cli-version }}
+        shell: bash
+        run: |
+          curl -sSL -o mod.jar https://repo1.maven.org/maven2/io/moderne/moderne-cli/${{ env.MODERNE_CLI_VERSION }}/moderne-cli-${{ env.MODERNE_CLI_VERSION }}.jar
+          echo '#!/bin/bash' > mod
+          echo 'java -jar "'"$GITHUB_WORKSPACE"'/mod.jar" "$@"' >> mod
+          chmod +x mod
+
+          cat > mod-run <<'EOF'
+          #!/bin/bash
+          set -o pipefail
+          mod run "$@" 2>&1 | tee output.log
+          # Strip carriage-return progress artifacts so overwritten status lines
+          # (e.g. "Found 0 errors …") do not cause false-positive matches.
+          sed $'s/.*\r//' output.log > output_rendered.log
+          if grep -qE "Found [0-9]+ errors while running the recipe\." output_rendered.log; then
+            echo "Recipe execution failed with errors"
+            exit 1
+          fi
+          if grep -q "Unable to find recipe" output_rendered.log; then
+            echo "Recipe not found"
+            exit 1
+          fi
+          EOF
+          chmod +x mod-run
+
+          echo "$GITHUB_WORKSPACE" >> $GITHUB_PATH
+
+      - name: Install recipe JAR for codemods
+        env:
+          REWRITE_CODEMODS_NG_VERSION: "0.18.2"
+        shell: bash
+        run: mod config recipes jar install org.openrewrite.recipe:rewrite-codemods-ng:${{ env.REWRITE_CODEMODS_NG_VERSION }}
+
+      - name: Install recipe NPM package for rewrite-angular
+        shell: bash
+        run: mod config recipes npm install @openrewrite/recipes-angular
+
+      - name: Install npm dependencies
+        shell: bash
+        run: npm install
+
+      - name: Build LST
+        shell: bash
+        run: mod build . --no-download
+
+      - name: Run Angular v21 codemod migration recipe
+        shell: bash
+        run: mod-run . --recipe=org.openrewrite.codemods.migrate.angular.v21
+
+      - name: Run UpgradeToAngular21 recipe
+        shell: bash
+        run: mod-run . --recipe=org.openrewrite.angular.UpgradeToAngular21
