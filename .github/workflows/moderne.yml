@@ -87,10 +87,6 @@ jobs:
         shell: bash
         run: mod config recipes npm install @openrewrite/recipes-angular@${{ env.RECIPES_ANGULAR_VERSION }}
 
-      - name: Install npm dependencies
-        shell: bash
-        run: npm install
-
       - name: Build LST
         shell: bash
         run: mod build . --no-download
