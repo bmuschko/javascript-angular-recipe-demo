@@ -107,10 +107,13 @@ jobs:
             mod study . --last-recipe-run --data-table SourcesFileErrors 2>&1 || true
             for csv in .moderne/run/*/datatables/org.openrewrite.table.SourcesFileErrors.csv; do
               [ -f "$csv" ] || continue
-              while IFS= read -r line; do
-                echo "-------------"
-                echo "$line"
-              done < "$csv"
-              echo "-------------"
+              python3 -c "
+          import csv, sys
+          with open(sys.argv[1]) as f:
+              for row in csv.reader(f):
+                  print('-------------')
+                  print(','.join(row))
+          print('-------------')
+          " "$csv"
             done
           fi
