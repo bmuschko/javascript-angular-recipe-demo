@@ -94,7 +94,7 @@ jobs:
 
       - name: Install recipe NPM package for rewrite-angular
         env:
-          RECIPES_ANGULAR_VERSION: "1.1.0"
+          RECIPES_ANGULAR_VERSION: "1.1.1"
         shell: bash
         run: mod config recipes npm install @openrewrite/recipes-angular@${{ env.RECIPES_ANGULAR_VERSION }}
 
