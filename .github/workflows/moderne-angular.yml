@@ -38,7 +38,7 @@ jobs:
         run: |
           irm https://app.moderne.io/cli/windows | iex
           $global:LASTEXITCODE = 0
-          echo "$env:USERPROFILE\.moderne\cli\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+          Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.moderne\cli\bin"
 
       - name: Set up mod-run helper
         shell: bash
@@ -83,17 +83,13 @@ jobs:
 
           echo "$BIN_DIR" >> $GITHUB_PATH
 
-      - name: Install recipe JAR for codemods
-        env:
-          REWRITE_CODEMODS_NG_VERSION: "0.21.4"
+      - name: Install recipe JAR for rewrite-javascript
         shell: bash
-        run: mod config recipes jar install org.openrewrite.recipe:rewrite-codemods-ng:${{ env.REWRITE_CODEMODS_NG_VERSION }}
+        run: mod config recipes jar install org.openrewrite:rewrite-javascript:8.88.0
 
       - name: Install recipe NPM package for rewrite-angular
-        env:
-          RECIPES_ANGULAR_VERSION: "1.7.0"
         shell: bash
-        run: mod config recipes npm install @openrewrite/recipes-angular@${{ env.RECIPES_ANGULAR_VERSION }}
+        run: mod config recipes npm install @openrewrite/recipes-angular@1.7.0
 
       - name: Build LST
         shell: bash
