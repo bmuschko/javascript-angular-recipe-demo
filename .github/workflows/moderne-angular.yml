@@ -38,13 +38,17 @@ jobs:
         run: |
           irm https://app.moderne.io/cli/windows | iex
           $global:LASTEXITCODE = 0
-          $binDir = "$env:USERPROFILE\.moderne\cli\bin"
-          Write-Host "Contents of bin dir:"
-          Get-ChildItem $binDir -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.Name }
-          Write-Host "Contents of dist dir:"
-          Get-ChildItem "$env:USERPROFILE\.moderne\cli\dist" -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.Name }
-          Add-Content -Path $env:GITHUB_PATH -Value $binDir
-          Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.moderne\cli\dist"
+          Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.moderne\cli\bin"
+
+      - name: Create bash-compatible mod wrapper (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          cat > "$HOME/.moderne/cli/bin/mod" <<'EOF'
+          #!/bin/bash
+          exec cmd.exe //C mod.cmd "$@"
+          EOF
+          chmod +x "$HOME/.moderne/cli/bin/mod"
 
       - name: Set up mod-run helper
         shell: bash
