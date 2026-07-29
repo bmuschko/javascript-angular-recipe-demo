@@ -9,45 +9,41 @@ on:
 
 jobs:
   recipe-verification:
-    name: recipe-verification (${{ matrix.os }}, CLI ${{ matrix.cli-version }}, Java ${{ matrix.java-version }})
+    name: recipe-verification (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-latest
-            cli-version: "4.4.2"
-            java-version: "25"
-          - os: windows-latest
-            cli-version: "4.4.2"
-            java-version: "25"
+        os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: ${{ matrix.java-version }}
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
 
-      - name: Install Moderne CLI
-        env:
-          MODERNE_CLI_VERSION: ${{ matrix.cli-version }}
+      - name: Install Moderne CLI (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          curl -sSL https://app.moderne.io/cli | bash
+          echo "$HOME/.moderne/bin" >> $GITHUB_PATH
+
+      - name: Install Moderne CLI (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          irm https://app.moderne.io/cli/windows | iex
+          echo "$env:USERPROFILE\.moderne\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Set up mod-run helper
         shell: bash
         run: |
           BIN_DIR="$RUNNER_TEMP/moderne-bin"
           mkdir -p "$BIN_DIR"
-          curl -sSL -o "$BIN_DIR/mod.jar" https://repo1.maven.org/maven2/io/moderne/moderne-cli/${{ env.MODERNE_CLI_VERSION }}/moderne-cli-${{ env.MODERNE_CLI_VERSION }}.jar
-          echo '#!/bin/bash' > "$BIN_DIR/mod"
-          echo 'java -jar "'"$BIN_DIR"'/mod.jar" "$@"' >> "$BIN_DIR/mod"
-          chmod +x "$BIN_DIR/mod"
 
           cat > "$BIN_DIR/mod-run" <<'EOF'
           #!/bin/bash
@@ -102,9 +98,9 @@ jobs:
 
       - name: Upload Moderne logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: moderne-angular-logs-${{ matrix.os }}-cli-${{ matrix.cli-version }}
+          name: moderne-angular-logs-${{ matrix.os }}
           path: .moderne/
           if-no-files-found: ignore
           include-hidden-files: true
