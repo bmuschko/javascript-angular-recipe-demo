@@ -37,7 +37,20 @@ jobs:
       - name: Install Moderne CLI (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: choco install mod --prerelease -y
+        run: |
+          irm https://app.moderne.io/cli/windows | iex
+          $global:LASTEXITCODE = 0
+          Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.moderne\cli\bin"
+
+      - name: Create bash-compatible mod wrapper (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          cat > "$USERPROFILE/.moderne/cli/bin/mod" <<'WRAPPER'
+          #!/bin/bash
+          exec cmd.exe //C mod.cmd "$@"
+          WRAPPER
+          chmod +x "$USERPROFILE/.moderne/cli/bin/mod"
 
       - name: Set up mod-run helper
         shell: bash
