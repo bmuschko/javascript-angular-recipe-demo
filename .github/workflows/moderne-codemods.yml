@@ -1,4 +1,4 @@
-name: Moderne JavaScript recipes
+name: Moderne Angular codemods migration
 
 on:
   push:
@@ -92,12 +92,6 @@ jobs:
         shell: bash
         run: mod config recipes jar install org.openrewrite.recipe:rewrite-codemods-ng:${{ env.REWRITE_CODEMODS_NG_VERSION }}
 
-      - name: Install recipe NPM package for rewrite-angular
-        env:
-          RECIPES_ANGULAR_VERSION: "1.7.0"
-        shell: bash
-        run: mod config recipes npm install @openrewrite/recipes-angular@${{ env.RECIPES_ANGULAR_VERSION }}
-
       - name: Build LST
         shell: bash
         run: mod build . --no-download
@@ -106,15 +100,11 @@ jobs:
         shell: bash
         run: mod-run . --recipe=org.openrewrite.codemods.migrate.angular.v21
 
-      - name: Run UpgradeToAngular21 recipe
-        shell: bash
-        run: mod-run . --recipe=org.openrewrite.angular.UpgradeToAngular21
-
       - name: Upload Moderne logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: moderne-logs-${{ matrix.os }}-cli-${{ matrix.cli-version }}
+          name: moderne-codemods-logs-${{ matrix.os }}-cli-${{ matrix.cli-version }}
           path: .moderne/
           if-no-files-found: ignore
           include-hidden-files: true

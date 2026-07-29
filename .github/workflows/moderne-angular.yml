@@ -1,0 +1,110 @@
+name: Moderne UpgradeToAngular21
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  recipe-verification:
+    name: recipe-verification (${{ matrix.os }}, CLI ${{ matrix.cli-version }}, Java ${{ matrix.java-version }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            cli-version: "4.4.2"
+            java-version: "25"
+          - os: windows-latest
+            cli-version: "4.4.2"
+            java-version: "25"
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java-version }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Moderne CLI
+        env:
+          MODERNE_CLI_VERSION: ${{ matrix.cli-version }}
+        shell: bash
+        run: |
+          BIN_DIR="$RUNNER_TEMP/moderne-bin"
+          mkdir -p "$BIN_DIR"
+          curl -sSL -o "$BIN_DIR/mod.jar" https://repo1.maven.org/maven2/io/moderne/moderne-cli/${{ env.MODERNE_CLI_VERSION }}/moderne-cli-${{ env.MODERNE_CLI_VERSION }}.jar
+          echo '#!/bin/bash' > "$BIN_DIR/mod"
+          echo 'java -jar "'"$BIN_DIR"'/mod.jar" "$@"' >> "$BIN_DIR/mod"
+          chmod +x "$BIN_DIR/mod"
+
+          cat > "$BIN_DIR/mod-run" <<'EOF'
+          #!/bin/bash
+          set -o pipefail
+          mod run "$@" 2>&1 | tee output.log
+          # Strip carriage-return progress artifacts so overwritten status lines
+          # (e.g. "Found 0 errors …") do not cause false-positive matches.
+          sed $'s/.*\r//' output.log | sed 's/\x1b\[[0-9;]*m//g' > output_rendered.log
+          if grep -qE "Found [0-9]+ errors while running the recipe\." output_rendered.log; then
+            echo "::warning::Recipe execution reported errors (may be bugs in recipe sub-components)"
+            echo "--- SourcesFileErrors ---"
+            mod study . --last-recipe-run --data-table SourcesFileErrors 2>&1 || true
+            for csv in .moderne/run/*/datatables/org.openrewrite.table.SourcesFileErrors.csv; do
+              [ -f "$csv" ] || continue
+              python3 -c "
+          import csv, sys
+          with open(sys.argv[1]) as f:
+              for row in csv.reader(f):
+                  print('-------------')
+                  print(','.join(row))
+          print('-------------')
+          " "$csv"
+            done
+          fi
+          run_log=$(grep -oP 'See run log at \K\S+' output_rendered.log || true)
+          if [ -n "$run_log" ] && [ -f "$run_log" ]; then
+            echo "--- Run Log ($run_log) ---"
+            cat "$run_log"
+          fi
+          if grep -q "Unable to find recipe" output_rendered.log; then
+            echo "Recipe not found"
+            exit 1
+          fi
+          EOF
+          chmod +x "$BIN_DIR/mod-run"
+
+          echo "$BIN_DIR" >> $GITHUB_PATH
+
+      - name: Install recipe NPM package for rewrite-angular
+        env:
+          RECIPES_ANGULAR_VERSION: "1.7.0"
+        shell: bash
+        run: mod config recipes npm install @openrewrite/recipes-angular@${{ env.RECIPES_ANGULAR_VERSION }}
+
+      - name: Build LST
+        shell: bash
+        run: mod build . --no-download
+
+      - name: Run UpgradeToAngular21 recipe
+        shell: bash
+        run: mod-run . --recipe=org.openrewrite.angular.UpgradeToAngular21
+
+      - name: Upload Moderne logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: moderne-angular-logs-${{ matrix.os }}-cli-${{ matrix.cli-version }}
+          path: .moderne/
+          if-no-files-found: ignore
+          include-hidden-files: true
