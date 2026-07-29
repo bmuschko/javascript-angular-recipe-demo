@@ -36,8 +36,8 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Continue'
           irm https://app.moderne.io/cli/windows | iex
+          $global:LASTEXITCODE = 0
           echo "$env:USERPROFILE\.moderne\cli\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Set up mod-run helper
