@@ -25,6 +25,10 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Install Homebrew (Linux)
+        if: runner.os == 'Linux'
+        uses: Homebrew/actions/setup-homebrew@master
+
       - name: Install Moderne CLI (Linux)
         if: runner.os == 'Linux'
         shell: bash
