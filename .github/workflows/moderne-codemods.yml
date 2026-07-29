@@ -30,14 +30,15 @@ jobs:
         shell: bash
         run: |
           curl -sSL https://app.moderne.io/cli | bash
-          echo "$HOME/.moderne/bin" >> $GITHUB_PATH
+          echo "$HOME/.moderne/cli/bin" >> $GITHUB_PATH
 
       - name: Install Moderne CLI (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Continue'
           irm https://app.moderne.io/cli/windows | iex
-          echo "$env:USERPROFILE\.moderne\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+          echo "$env:USERPROFILE\.moderne\cli\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Set up mod-run helper
         shell: bash
