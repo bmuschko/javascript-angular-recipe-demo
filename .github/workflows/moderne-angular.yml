@@ -38,7 +38,13 @@ jobs:
         run: |
           irm https://app.moderne.io/cli/windows | iex
           $global:LASTEXITCODE = 0
-          Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.moderne\cli\bin"
+          $binDir = "$env:USERPROFILE\.moderne\cli\bin"
+          Write-Host "Contents of bin dir:"
+          Get-ChildItem $binDir -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.Name }
+          Write-Host "Contents of dist dir:"
+          Get-ChildItem "$env:USERPROFILE\.moderne\cli\dist" -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.Name }
+          Add-Content -Path $env:GITHUB_PATH -Value $binDir
+          Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.moderne\cli\dist"
 
       - name: Set up mod-run helper
         shell: bash
