@@ -28,27 +28,12 @@ jobs:
       - name: Install Moderne CLI (Linux)
         if: runner.os == 'Linux'
         shell: bash
-        run: |
-          curl -sSL https://app.moderne.io/cli | bash
-          echo "$HOME/.moderne/cli/bin" >> $GITHUB_PATH
+        run: brew install moderneinc/moderne/mod
 
       - name: Install Moderne CLI (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          irm https://app.moderne.io/cli/windows | iex
-          $global:LASTEXITCODE = 0
-          Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.moderne\cli\bin"
-
-      - name: Create bash-compatible mod wrapper (Windows)
-        if: runner.os == 'Windows'
-        shell: bash
-        run: |
-          cat > "$HOME/.moderne/cli/bin/mod" <<'EOF'
-          #!/bin/bash
-          exec cmd.exe //C mod.cmd "$@"
-          EOF
-          chmod +x "$HOME/.moderne/cli/bin/mod"
+        run: choco install mod --prerelease -y
 
       - name: Set up mod-run helper
         shell: bash
