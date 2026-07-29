@@ -83,6 +83,12 @@ jobs:
 
           echo "$BIN_DIR" >> $GITHUB_PATH
 
+      - name: Install recipe JAR for codemods
+        env:
+          REWRITE_CODEMODS_NG_VERSION: "0.21.4"
+        shell: bash
+        run: mod config recipes jar install org.openrewrite.recipe:rewrite-codemods-ng:${{ env.REWRITE_CODEMODS_NG_VERSION }}
+
       - name: Install recipe NPM package for rewrite-angular
         env:
           RECIPES_ANGULAR_VERSION: "1.7.0"
